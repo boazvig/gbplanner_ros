@@ -51,7 +51,7 @@ wstool update
 
 Build:
 ```bash
-catkin config -DCMAKE_BUILD_TYPE=Release
+catkin config -DCMAKE_BUILD_TYPE=Release (IMPORTANT DO NOT SKIP otherwise might error in linkage)
 catkin build
 ```
 
