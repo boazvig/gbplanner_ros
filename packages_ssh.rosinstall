@@ -35,17 +35,15 @@
     local-name: src/misc/yaml_cpp_catkin/
     uri: git@github.com:ethz-asl/yaml_cpp_catkin.git
     version: master
-
 # MAPPING
 - git:
     local-name: src/mapping/voxblox/
     uri: git@github.com:ntnu-arl/voxblox.git
     version: dev/noetic
-
 #EXPLORATION
 - git:
     local-name: src/exploration/gbplanner_ros/
-    uri: git@github.com:boazvig/gbplanner_ros.git
+    uri: https://github.com/boazvig/gbplanner_ros.git
     version: gbplanner2
 - git:
     local-name: src/exploration/pci_general/
