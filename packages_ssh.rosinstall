@@ -70,3 +70,9 @@
     uri: git@github.com:ntnu-arl/subt_cave_sim.git
     version: master
 
+# Jackal
+ - git:
+    local-name: src/sim/jackal/
+    uri: git@github.com:boazvig/jackal.git
+    version: noetic-devel
+
