@@ -1,0 +1,112 @@
+<launch>
+  <!-- All settings -->
+  <arg name="robot_name" default="smb"/>
+  <arg name="gazebo_gui_en" default="true"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="rviz_en" default="true" />
+  <arg name="launch_prefix" default=""/> <!-- gdb -ex run //args -->
+  <param name="use_sim_time" value="$(arg use_sim_time)"/>
+
+  <!-- Config files -->
+  <arg name="gbplanner_config_file" default="$(find gbplanner)/config/jackal/gbplanner_config.yaml"/>
+  <arg name="pci_file" default="$(find gbplanner)/config/jackal/planner_control_interface_sim_config.yaml"/>
+  <arg name="voxblox_config_file" default="$(find gbplanner)/config/jackal/voxblox_sim_config.yaml"/>
+  <arg name="map_config_file" default="$(arg voxblox_config_file)"/>
+  <!-- <arg name="world_file" default="$(find planner_gazebo_sim)/worlds/niosh_osrf.world"/> -->
+  <!--<arg name="world_file" default="$(find planner_gazebo_sim)/worlds/darpa_cave_02.world"/> -->
+  <!--<arg name="world_file" default="$(find subt_cave_sim)/worlds/house1.world"/>  -->
+  <!-- <arg name="world_file" default="$(find planner_gazebo_sim)/worlds/pittsburgh_mine.world"/> -->
+ <arg name="world_file" default="$(find subt_cave_sim)/worlds/house5.world"/> 
+
+  <!-- Static TF -->
+  <node pkg="tf" type="static_transform_publisher" name="tf_53" args="0 0 0 0 0 0 world navigation 100" />
+
+
+
+<env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find planner_gazebo_sim)/models:$(find subt_cave_sim)/models"/>
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+		<arg name="world_name" value="$(arg world_file)"/>
+		<arg name="paused" value="false"/>
+		<arg name="use_sim_time" value="true"/>
+		<arg name="gui" value="$(arg gazebo_gui_en)"/>
+		<arg name="headless" value="false"/>
+		<arg name="debug" value="false"/>
+    <arg name="verbose" value="true"/>
+	</include>
+
+
+  <arg name="front_laser" default="true" />
+  <arg name="default_config" value="front_laser" if="$(arg front_laser)" />
+  <arg name="default_config" value="base" unless="$(arg front_laser)" />
+  <!-- end of hack -->
+
+  <!-- Configuration of Jackal which you would like to simulate.
+       See jackal_description for details. -->
+  <arg name="config" default="$(arg default_config)" />
+
+  <!-- Optionally enable teleop for the simulation -->
+  <arg name="joystick" default="true" />
+
+
+ <!-- Spawn Jackal -->
+  <include file="$(find jackal_gazebo)/launch/spawn_jackal.launch">
+    <arg name="x" value="0" />
+    <arg name="y" value="0.0" />
+    <arg name="z" value="1.0" />
+    <arg name="yaw" value="0" />
+    <arg name="config" value="$(arg config)" />
+    <arg name="joystick" value="$(arg joystick)" />
+  </include>
+
+  <node name="odom_to_world_tf" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 /world /odom 10"/> 
+
+  <!-- <include file="$(find smb_gazebo)/launch/spawn_smb.launch">
+    <arg name="joystick" value="true"/>
+    <arg name="x" value="-1.0" />
+    <arg name="y" value="2.0" />
+    <arg name="z" value="1.2" />
+    <arg name="yaw" value="3.14" />
+  </include> -->
+
+  <include file="$(find smb_path_tracker)/launch/pure_pursuit_tracker.launch"/>
+
+  <node pkg="topic_tools" type="relay" name="vlp_relay" args="/velodyne_points /input_pointcloud" />
+  <node pkg="topic_tools" type="relay" name="front_lidar_relay" args="/lidar_front_points /input_pointcloud" />
+ 
+
+
+ <node pkg="topic_tools" type="relay" name="jackal_odom_relay" args="/jackal/ground_truth/state  /ground_truth/state" />
+ <node pkg="topic_tools" type="relay" name="jackal_cmd_vel_relay" args="/smb_velocity_controller/cmd_vel /jackal_velocity_controller/cmd_vel" /> 
+
+<!-- relay and msg2tf for jackal robot -->
+ <node pkg="topic_tools" type="relay" name="vlp_relay2" args="/mid/points /input_pointcloud" />
+ <node name="message_to_tf" pkg="smb_gazebo" type="message_to_tf" output="screen">
+      <param name="odometry_topic" value="ground_truth/state"/>
+      <param name="frame_id" value="world"/>
+</node>
+
+ 
+
+
+  <arg name="odometry_topic" default="/ground_truth/state"/>
+  <node name="pose_throttler" type="throttle" pkg="topic_tools" args="messages $(arg robot_name)/ground_truth/pose_with_covariance 10 /msf_core/pose" />
+  <!-- Graph based planning -->
+  <node pkg="gbplanner" type="gbplanner_node" name="gbplanner_node" output="screen" launch-prefix="$(arg launch_prefix)">
+    <remap from="odometry" to="$(arg odometry_topic)" />
+    <remap from="/pointcloud" to="/input_pointcloud" />
+    <rosparam command="load" file="$(arg gbplanner_config_file)" />
+    <rosparam command="load" file="$(arg map_config_file)" />
+  </node>
+
+  <!-- Planner and Control Interface -->
+  <node pkg="pci_general" type="pci_general_ros_node" name="pci_general_ros_node" output="screen">
+    <remap from="command/trajectory" to="$(arg robot_name)/command/trajectory" />
+    <remap from="planner_server" to="gbplanner" />
+    <remap from="planner_homing_server" to="gbplanner/homing" />
+    <remap from="odometry" to="$(arg odometry_topic)"/>
+    <rosparam command="load" file="$(arg pci_file)" />
+  </node>
+
+  <node pkg="rviz" type="rviz" name="gbplanner_ui" output="screen" args="-d $(find gbplanner)/config/rviz/smb.rviz"/>
+
+</launch>
