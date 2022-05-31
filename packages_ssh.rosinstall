@@ -71,8 +71,14 @@
     version: master
 
 # Jackal
- - git:
+- git:
     local-name: src/sim/jackal/
     uri: git@github.com:boazvig/jackal.git
     version: noetic-devel
+# sensors
+
+- git:
+    local-name: src/sensors/velodyne/
+    uri: git@github.com:boazvig/velodyne.git
+    version: master
 
